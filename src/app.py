@@ -68,14 +68,6 @@ class MainApplication(Adw.Application):
         if shortcuts:
             self.set_accels_for_action(f"app.{name}", shortcuts)
 
-    def on_image_button_clicked(self, widget, event):
-        print("Image clicked")
-        print(event)
-
-    def on_destroy_button_clicked(self, widget, event):
-        print("Destroy clicked")
-        print(event)
-
 
 def main():
     """The application's entry point."""

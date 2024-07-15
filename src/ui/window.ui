@@ -32,11 +32,12 @@
                 <property name="margin-start">24</property>
                 <property name="margin-end">24</property>
                 <property name="orientation">GTK_ORIENTATION_VERTICAL</property>
+                <property name="valign">GTK_ALIGN_CENTER</property>
                 <child>
-                  <object class="GtkButton" id="image_button">
+                  <object class="AdwBin" id="image_bin">
                     <property name="height-request">400</property>
                     <property name="width-request">400</property>
-                    <property name="action-name">win.open_image</property>
+                    <property name="overflow">GTK_OVERFLOW_HIDDEN</property>
                     <child>
                       <object class="GtkLabel">
                         <property name="label">Click to select or drag and drop an image.</property>
@@ -44,6 +45,7 @@
                     </child>
                     <style>
                       <class name="card" />
+                      <class name="activatable" />
                     </style>
                   </object>
                 </child>
