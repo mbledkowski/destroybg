@@ -1,5 +1,7 @@
+import time
 from gi.repository import Adw, Gtk, Gio, GLib, Gdk
 from pathlib import Path
+from logic import RemoveBackground
 
 
 def margin_setter(widget: Gtk.Widget, value):
@@ -15,6 +17,7 @@ class MainWindow(Adw.ApplicationWindow):
     __gtype_name__ = "MainWindow"
 
     image_bin = Gtk.Template.Child()
+    destroy_button = Gtk.Template.Child()
 
     css_provider = Gtk.CssProvider()
     css_provider.load_from_file(
@@ -32,14 +35,17 @@ class MainWindow(Adw.ApplicationWindow):
 
         self.label = self.image_bin.get_child()
 
-        self.click_controller = Gtk.GestureClick()
-        self.file_dialog_event_handler = self.click_controller.connect(
+        self.image_bin_click_controller = Gtk.GestureClick()
+        self.file_dialog_event_handler = self.image_bin_click_controller.connect(
             "released", self.on_open_file_dialog
         )
-        self.image_bin.add_controller(self.click_controller)
+        self.image_bin.add_controller(self.image_bin_click_controller)
 
-    def get_overlay(self, file):
-        image = Gtk.Picture.new_for_file(file)
+        self.destroy_button_click_controller = Gtk.GestureClick()
+        self.destroy_button.add_controller(self.destroy_button_click_controller)
+
+    def get_overlay(self):
+        image = Gtk.Picture.new_for_file(self.file)
         close_icon = Gtk.Image()
         close_icon.set_from_icon_name("window-close-symbolic")
         close_button = Gtk.Button()
@@ -57,24 +63,49 @@ class MainWindow(Adw.ApplicationWindow):
     def set_image_bin_empty(self, *args):
         self.image_bin.add_css_class("activatable")
         self.image_bin.set_child(self.label)
-        self.file_dialog_event_handler = self.click_controller.connect(
+        self.file_dialog_event_handler = self.image_bin_click_controller.connect(
             "released", self.on_open_file_dialog
         )
+        self.remove_background = None
+        self.destroy_button.set_sensitive(False)
 
-    def set_image_bin_propagated(self, file, *args):
-        self.click_controller.disconnect(self.file_dialog_event_handler)
+    def set_image_bin_propagated(self, *args):
+        self.image_bin_click_controller.disconnect(self.file_dialog_event_handler)
         self.image_bin.remove_css_class("activatable")
-        overlay = self.get_overlay(file)
+        overlay = self.get_overlay()
         self.image_bin.set_child(overlay)
+        self.remove_background = RemoveBackground(self.file.get_path())
+        self.destroy_button.set_sensitive(True)
+        self.destroy_button_click_controller.connect(
+            "pressed", self.remove_background.remove_background
+        )
+        self.destroy_button.connect("clicked", self.on_open_save_file_dialog)
+
+    def on_close_save_file_dialog(self, source, result, *args):
+        try:
+            self.save_location = self.save_dialog.save_finish(result)
+            self.remove_background.save_image(self.save_location.get_path())
+        except GLib.Error:
+            print("Operation was cancelled.")
+
+    def on_open_save_file_dialog(self, *args):
+        if self.file is not None:
+            self.save_dialog = Gtk.FileDialog(
+                title="Save Image",
+                initial_file=self.file,
+                modal=True,
+            )
+            self.save_dialog.save(self, None, self.on_close_save_file_dialog)
+        else:
+            raise ValueError("No image given. WHICH SHOULD NOT HAPPENED!")
 
     def on_close_file_dialog(self, source, result, *args):
         try:
-            file = self.file_dialog.open_finish(result)
+            self.file = self.file_dialog.open_finish(result)
 
-            if file is not None:
-                print(file.get_path())
-                self.file = file.get_path()
-                self.set_image_bin_propagated(file)
+            if self.file is not None:
+                print(self.file.get_path())
+                self.set_image_bin_propagated()
 
         except GLib.Error:
             print("Operation was cancelled.")

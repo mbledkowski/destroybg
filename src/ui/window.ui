@@ -50,7 +50,8 @@
                   </object>
                 </child>
                 <child>
-                  <object class="GtkButton">
+                  <object class="GtkButton" id="destroy_button">
+                    <property name="sensitive">False</property>
                     <child>
                       <object class="GtkLabel">
                         <property name="label">Destroy the background.</property>
