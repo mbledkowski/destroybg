@@ -18,6 +18,7 @@ class MainWindow(Adw.ApplicationWindow):
 
     image_bin = Gtk.Template.Child()
     destroy_button = Gtk.Template.Child()
+    toast_overlay = Gtk.Template.Child()
 
     css_provider = Gtk.CssProvider()
     css_provider.load_from_file(
@@ -37,34 +38,39 @@ class MainWindow(Adw.ApplicationWindow):
 
         self.image_bin_click_controller = Gtk.GestureClick()
         self.file_dialog_event_handler = self.image_bin_click_controller.connect(
-            "released", self.on_open_file_dialog
+            "released", self.open_file_dialog
         )
         self.image_bin.add_controller(self.image_bin_click_controller)
 
         self.destroy_button_click_controller = Gtk.GestureClick()
         self.destroy_button.add_controller(self.destroy_button_click_controller)
 
+        self.image_bin_drop_controller = Gtk.DropTarget(actions=Gdk.DragAction.COPY)
+        self.image_bin_drop_controller.set_gtypes([Gio.File])
+        self.image_bin_drop_controller.connect("drop", self.on_drop)
+        self.image_bin.add_controller(self.image_bin_drop_controller)
+
     def get_overlay(self):
         image = Gtk.Picture.new_for_file(self.file)
         close_icon = Gtk.Image()
         close_icon.set_from_icon_name("window-close-symbolic")
-        close_button = Gtk.Button()
-        close_button.set_child(close_icon)
-        close_button.set_css_classes(["osd", "circular"])
-        margin_setter(close_button, 8)
-        close_button.set_halign(Gtk.Align.END)
-        close_button.set_valign(Gtk.Align.START)
-        close_button.connect("clicked", self.set_image_bin_empty)
+        self.close_button = Gtk.Button()
+        self.close_button.set_child(close_icon)
+        self.close_button.set_css_classes(["osd", "circular"])
+        margin_setter(self.close_button, 8)
+        self.close_button.set_halign(Gtk.Align.END)
+        self.close_button.set_valign(Gtk.Align.START)
+        self.close_button.connect("clicked", self.set_image_bin_empty)
         overlay = Gtk.Overlay()
         overlay.set_child(image)
-        overlay.add_overlay(close_button)
+        overlay.add_overlay(self.close_button)
         return overlay
 
     def set_image_bin_empty(self, *args):
         self.image_bin.add_css_class("activatable")
         self.image_bin.set_child(self.label)
         self.file_dialog_event_handler = self.image_bin_click_controller.connect(
-            "released", self.on_open_file_dialog
+            "released", self.open_file_dialog
         )
         self.remove_background = None
         self.destroy_button.set_sensitive(False)
@@ -79,27 +85,31 @@ class MainWindow(Adw.ApplicationWindow):
         self.destroy_button_click_controller.connect(
             "pressed", self.remove_background.remove_background
         )
-        self.destroy_button.connect("clicked", self.on_open_save_file_dialog)
+        self.destroy_button.connect("clicked", self.open_save_file_dialog)
 
-    def on_close_save_file_dialog(self, source, result, *args):
+    def close_save_file_dialog(self, source, result, *args):
         try:
             self.save_location = self.save_dialog.save_finish(result)
             self.remove_background.save_image(self.save_location.get_path())
+            self.toast_overlay.add_toast(Adw.Toast(title="Image saved successfully!"))
+            self.set_image_bin_empty()
         except GLib.Error:
             print("Operation was cancelled.")
 
-    def on_open_save_file_dialog(self, *args):
+    def open_save_file_dialog(self, *args):
         if self.file is not None:
             self.save_dialog = Gtk.FileDialog(
                 title="Save Image",
                 initial_file=self.file,
                 modal=True,
             )
-            self.save_dialog.save(self, None, self.on_close_save_file_dialog)
+            self.destroy_button.set_sensitive(False)
+            self.close_button.set_sensitive(False)
+            self.save_dialog.save(self, None, self.close_save_file_dialog)
         else:
             raise ValueError("No image given. WHICH SHOULD NOT HAPPENED!")
 
-    def on_close_file_dialog(self, source, result, *args):
+    def close_file_dialog(self, source, result, *args):
         try:
             self.file = self.file_dialog.open_finish(result)
 
@@ -110,10 +120,17 @@ class MainWindow(Adw.ApplicationWindow):
         except GLib.Error:
             print("Operation was cancelled.")
 
-    def on_open_file_dialog(self, *args):
+    def open_file_dialog(self, *args):
         self.file_dialog = Gtk.FileDialog(
             title="Open Image",
             default_filter=Gtk.FileFilter(name="images", mime_types=["image/*"]),
             modal=True,
         )
-        self.file_dialog.open(self, None, self.on_close_file_dialog)
+        self.file_dialog.open(self, None, self.close_file_dialog)
+
+    def on_drop(self, _ctrl, value, _x, _y):
+        self.file = value
+
+        if value is not None:
+            print(value.get_path())
+            self.set_image_bin_propagated()
