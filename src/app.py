@@ -5,13 +5,9 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Gio, Gtk, Adw
-from window import MainWindow
 
-# image_path = "https://farm5.staticflickr.com/4007/4322154488_997e69e4cf_z.jpg"
-# pipe = pipeline("image-segmentation", model="briaai/RMBG-1.4", trust_remote_code=True)
-# pillow_mask = pipe(image_path, return_mask=True)  # outputs a pillow mask
-# pillow_image = pipe(image_path)  # applies mask on input and returns a pillow image
+from gi.repository import Gio, Gtk, Adw
+from .window import MainWindow
 
 
 class MainApplication(Adw.Application):

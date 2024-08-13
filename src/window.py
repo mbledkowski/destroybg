@@ -1,7 +1,7 @@
 import time
 from gi.repository import Adw, Gtk, Gio, GLib, Gdk
 from pathlib import Path
-from logic import RemoveBackground
+from .logic import RemoveBackground
 
 
 def margin_setter(widget: Gtk.Widget, value):

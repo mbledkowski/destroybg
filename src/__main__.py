@@ -1,6 +1,5 @@
-import sys
 from .app import main
+import sys
 
-
-def start():
+if __name__ == "__main__":
     sys.exit(main())
